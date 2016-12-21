@@ -1,0 +1,37 @@
+{
+  "name": "mongod",
+  "description": "Start and stop a MongoDB server.",
+  "keywords": [
+    "mongodb",
+    "server",
+    "manager"
+  ],
+  "version": "0.0.0",
+  "license": "MIT",
+  "homepage": "https://github.com/BrandonZacharie/node-mongod#readme",
+  "bugs": {
+    "url": "https://github.com/BrandonZacharie/node-mongod/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BrandonZacharie/node-mongod.git"
+  },
+  "author": {
+    "name": "Brandon Zacharie",
+    "email": "brandon.zacharie@gmail.com"
+  },
+  "main": "Mongod.js",
+  "scripts": {
+    "test": "./node_modules/.bin/mocha --bail test",
+    "test+coverage": "./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha --report lcovonly -- --reporter dot",
+    "lint": "./node_modules/.bin/jshint Mongod.js",
+    "ci": "npm run lint && npm run test+coverage && cat ./coverage/lcov.info | ./node_modules/.bin/coveralls"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "coveralls": "^2.11.15",
+    "istanbul": "^0.4.5",
+    "jshint": "^2.9.4",
+    "mocha": "^3.1.2"
+  }
+}
