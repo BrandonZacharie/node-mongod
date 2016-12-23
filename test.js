@@ -100,12 +100,12 @@ describe('Mongod', function () {
   });
   before((done) => {
     const data = `
-      net:
-        bindIp: 127.0.0.1
-        port: ${port}
-      storage:
-        dbPath: ${dbpath}
-    `;
+net:
+  bindIp: 127.0.0.1
+  port: ${port}
+storage:
+  dbPath: ${dbpath}
+    `.trim();
 
     fs.writeFile(conf, data, done);
   });
