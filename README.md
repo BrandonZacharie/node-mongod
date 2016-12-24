@@ -142,7 +142,7 @@ either closes or errs.
 
 #### stdout
 
-Emitted when a MongoDB server prints to stdout.
+Emitted when a MongoDB server prints to stdout or stderr.
 
 #### open
 
