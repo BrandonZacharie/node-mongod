@@ -1,9 +1,17 @@
 language: node_js
 node_js:
-- '4'
-- '6'
-- '7'
+- "4.0"
+- "4"
+- "6.0"
+- "6"
+- "7"
 sudo: false
+addons:
+  apt:
+    sources:
+    - mongodb-3.2-precise
+    packages:
+    - mongodb-org-server
 script: npm run ci
 notifications:
   email: false
