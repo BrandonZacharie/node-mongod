@@ -1,0 +1,23 @@
+language: node_js
+node_js:
+- "4.0"
+- "4"
+- "6.0"
+- "6"
+- "7"
+sudo: false
+addons:
+  apt:
+    sources:
+    - mongodb-3.2-precise
+    packages:
+    - mongodb-org-server
+script: npm run ci
+notifications:
+  email: false
+  slack:
+    secure: jI3gt+t9s6NRCuMnEfQKqNziWpTVxKMAv2sXIukDzNgBzTl70oZcn4gGOoD+JWfPBDZV/3UFrKh3kEBKfIcfMbFaudfxPZLxeXwTtzvOxq1AfdH8mAZwqwSCtDu+1g6KfHtbyEHfJvJZGWKuGDgJUKq5rrkeU8v5rCALFZQbDKo=
+branches:
+  only:
+  - master
+  - develop
