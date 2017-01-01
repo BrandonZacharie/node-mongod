@@ -11,72 +11,75 @@ const before = mocha.before;
 const describe = mocha.describe;
 const it = mocha.it;
 
-describe('Mongod', function () {
-  const generateRandomPort = () =>
-    Math.floor(Math.random() * 10000) + 9000;
+const generateRandomPort = () =>
+  Math.floor(Math.random() * 10000) + 9000;
 
-  const generateRandomPath = () =>
-    `./data/db/${generateRandomPort()}`;
+const generateRandomPath = () =>
+  `data/db/${generateRandomPort()}`;
 
-  const mkdir = (dir) =>
-    new Promise((resolve, reject) => {
-      childprocess.exec(`mkdir -p ${dir}`, (err) => {
-        if (err === null) {
-          resolve();
-        }
-        else {
-          reject(err);
-        }
-      });
+const promisify = (delegate) =>
+  new Promise((resolve, reject) => {
+    delegate((err, value) => {
+      if (err == null) {
+        resolve(value);
+      }
+      else {
+        reject(err);
+      }
     });
+  });
 
-  const mkdbpath = (server) =>
-    mkdir(server.config.dbpath);
+const mkdir = (dir) =>
+  promisify((done) => childprocess.exec(`mkdir -p ${dir}`, done));
 
-  const expectIdle = (server) => {
-    expect(server.isOpening).to.equal(false);
-    expect(server.isRunning).to.equal(false);
-    expect(server.isClosing).to.equal(false);
-  };
+const mkdbpath = (server) =>
+  mkdir(server.config.dbpath);
 
-  const expectEmpty = (server) => {
-    expect(server.pid).to.equal(null);
-    expect(server.port).to.equal(null);
-    expect(server.process).to.equal(null);
-    expectIdle(server);
-  };
+const expectIdle = (server) => {
+  expect(server.isOpening).to.equal(false);
+  expect(server.isRunning).to.equal(false);
+  expect(server.isClosing).to.equal(false);
+};
 
-  const expectRunning = (server) => {
-    expect(server.isOpening).to.equal(false);
-    expect(server.isRunning).to.equal(true);
-    expect(server.isClosing).to.equal(false);
-    expect(server.process).to.not.equal(null);
-    expect(server.port).to.be.a('number');
-    expect(server.pid).to.be.a('number');
-  };
+const expectEmpty = (server) => {
+  expect(server.pid).to.equal(null);
+  expect(server.port).to.equal(null);
+  expect(server.process).to.equal(null);
+  expectIdle(server);
+};
 
-  const expectToOpen = (server, done) => {
-    const oldPromise = server.openPromise;
-    const newPromise = server.open(done);
+const expectRunning = (server) => {
+  expect(server.isOpening).to.equal(false);
+  expect(server.isRunning).to.equal(true);
+  expect(server.isClosing).to.equal(false);
+  expect(server.process).to.not.equal(null);
+  expect(server.port).to.be.a('number');
+  expect(server.pid).to.be.a('number');
+};
 
-    expect(newPromise).to.be.a('promise');
-    expect(newPromise).to.not.equal(oldPromise);
-    expect(server.isOpening).to.equal(true);
+const expectToOpen = (server, done) => {
+  const oldPromise = server.openPromise;
+  const newPromise = server.open(done);
 
-    return newPromise;
-  };
+  expect(newPromise).to.be.a('promise');
+  expect(newPromise).to.not.equal(oldPromise);
+  expect(server.isOpening).to.equal(true);
 
-  const expectToClose = (server, done) => {
-    const oldPromise = server.openPromise;
-    const newPromise = server.close(done);
+  return newPromise;
+};
 
-    expect(newPromise).to.be.a('promise');
-    expect(newPromise).to.not.equal(oldPromise);
-    expect(server.isClosing).to.equal(true);
+const expectToClose = (server, done) => {
+  const oldPromise = server.openPromise;
+  const newPromise = server.close(done);
 
-    return newPromise;
-  };
+  expect(newPromise).to.be.a('promise');
+  expect(newPromise).to.not.equal(oldPromise);
+  expect(server.isClosing).to.equal(true);
 
+  return newPromise;
+};
+
+describe('Mongod', function () {
   let bin = null;
   const conf = `./${new Date().toISOString()}.conf`;
   const port = generateRandomPort();
@@ -214,14 +217,12 @@ storage:
         return server.close();
       });
     });
-    it('should not start more than one server', () => {
+    it('should do nothing when a server is already started', () => {
       const server = new Mongod({ dbpath, port: generateRandomPort() });
 
-      return expectToOpen(server).then(() => {
-        const oldPromise = server.openPromise;
-        const newPromise = server.open();
-
-        expect(oldPromise).to.equal(newPromise);
+      return server.open().then(() => {
+        server.open();
+        expect(server.isOpening).to.equal(false);
         expectRunning(server);
 
         return server.close();
@@ -301,26 +302,10 @@ storage:
       return Promise
       .all([
         server.open(),
-        new Promise((resolve, reject) => {
-          setTimeout(() => {
-            server.close().then(resolve).catch(reject);
-          }, 10);
-        }),
-        new Promise((resolve, reject) => {
-          setTimeout(() => {
-            server.open().then(resolve).catch(reject);
-          }, 15);
-        }),
-        new Promise((resolve, reject) => {
-          setTimeout(() => {
-            server.close().then(resolve).catch(reject);
-          }, 20);
-        }),
-        new Promise((resolve, reject) => {
-          setTimeout(() => {
-            server.open().then(resolve).catch(reject);
-          }, 25);
-        })
+        promisify((done) => setTimeout(() => server.close(done), 10)),
+        promisify((done) => setTimeout(() => server.open(done), 15)),
+        promisify((done) => setTimeout(() => server.close(done), 20)),
+        promisify((done) => setTimeout(() => server.open(done), 25))
       ])
       .then(() => {
         expectRunning(server);
@@ -390,24 +375,23 @@ storage:
       .then(() => expectToClose(server))
       .then(() => expectIdle(server));
     });
-    it('should not stop a server more than once', () => {
+    it('should do nothing when a server is already stopped', () => {
       const server = new Mongod({ dbpath, port: generateRandomPort() });
 
-      return server.open().then(() => {
-        const oldPromise = server.close();
-        const newPromise = server.close();
-
-        expect(oldPromise).to.equal(newPromise);
-
-        return newPromise;
+      return server.open()
+      .then(() => server.close())
+      .then(() => {
+        server.close();
+        expect(server.isClosing).to.equal(false);
+        expectIdle(server);
       });
     });
-    it('should not stop a server that is already stopped', () => {
-      const server = new Mongod({ dbpath, port: generateRandomPort() });
-      const oldPromise = server.closePromise;
-      const newPromise = server.close();
+    it('should do nothing when a server was never started', () => {
+      const server = new Mongod();
 
-      expect(oldPromise).to.equal(newPromise);
+      server.close();
+      expect(server.isClosing).to.equal(false);
+      expectIdle(server);
     });
     it('should stop a server after #open() finishes', () => {
       const server = new Mongod({ dbpath, port: generateRandomPort() });
@@ -415,21 +399,9 @@ storage:
       return Promise
       .all([
         server.open(),
-        new Promise((resolve, reject) => {
-          setTimeout(() => {
-            server.close().then(resolve).catch(reject);
-          }, 10);
-        }),
-        new Promise((resolve, reject) => {
-          setTimeout(() => {
-            server.open().then(resolve).catch(reject);
-          }, 15);
-        }),
-        new Promise((resolve, reject) => {
-          setTimeout(() => {
-            server.close().then(resolve).catch(reject);
-          }, 20);
-        })
+        promisify((done) => setTimeout(() => server.close(done), 10)),
+        promisify((done) => setTimeout(() => server.open(done), 15)),
+        promisify((done) => setTimeout(() => server.close(done), 20))
       ])
       .then(() => {
         expectIdle(server);
