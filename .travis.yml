@@ -12,7 +12,9 @@ addons:
     - mongodb-3.2-precise
     packages:
     - mongodb-org-server
-script: npm run ci
+script: npm run lint && npm test
+after_success:
+- cat coverage/lcov.info | node_modules/.bin/coveralls
 notifications:
   email: false
   slack:
