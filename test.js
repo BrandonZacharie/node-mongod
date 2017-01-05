@@ -11,12 +11,26 @@ const before = mocha.before;
 const describe = mocha.describe;
 const it = mocha.it;
 
+/**
+ * Get a random port number.
+ * @return {Number}
+ */
 const generateRandomPort = () =>
   Math.floor(Math.random() * 10000) + 9000;
 
+/**
+ * Get a random data path.
+ * @return {Number}
+ */
 const generateRandomPath = () =>
   `data/db/${generateRandomPort()}`;
 
+/**
+ * Get a {@link Promise} that is resolved or rejected when the given
+ * {@linkcode delegate} invokes the callback it is provided.
+ * @argument {Function} delegate
+ * @return {Promise}
+ */
 const promisify = (delegate) =>
   new Promise((resolve, reject) => {
     delegate((err, value) => {
@@ -29,25 +43,38 @@ const promisify = (delegate) =>
     });
   });
 
+/**
+ * Make a directory at a givem {@linkcode dir} path.
+ * @argument {String} dir
+ * @return {Promise}
+ */
 const mkdir = (dir) =>
   promisify((done) => childprocess.exec(`mkdir -p ${dir}`, done));
 
+/**
+ * Make the dbpath directory for a given {@linkcode server}.
+ * @argument {Mongod} server
+ * @return {Promise}
+ */
 const mkdbpath = (server) =>
   mkdir(server.config.dbpath);
 
+/**
+ * Expect a given {@linkcode server} to not be opening, closing, or running.
+ * @argument {Mongod} server
+ * @return {undefined}
+ */
 const expectIdle = (server) => {
   expect(server.isOpening).to.equal(false);
   expect(server.isRunning).to.equal(false);
   expect(server.isClosing).to.equal(false);
 };
 
-const expectEmpty = (server) => {
-  expect(server.pid).to.equal(null);
-  expect(server.port).to.equal(null);
-  expect(server.process).to.equal(null);
-  expectIdle(server);
-};
-
+/**
+ * Expect a given {@linkcode server} to be running.
+ * @argument {Mongod} server
+ * @return {undefined}
+ */
 const expectRunning = (server) => {
   expect(server.isOpening).to.equal(false);
   expect(server.isRunning).to.equal(true);
@@ -57,6 +84,13 @@ const expectRunning = (server) => {
   expect(server.pid).to.be.a('number');
 };
 
+/**
+ * Attempt to start a given {@linkcode server} and expect it to be opening.
+ * Passes {linkcode done} to {@link Mongod#open}.
+ * @argument {Mongod} server
+ * @argument {Mongod~callback} [done]
+ * @return {undefined}
+ */
 const expectToOpen = (server, done) => {
   const oldPromise = server.openPromise;
   const newPromise = server.open(done);
@@ -68,6 +102,13 @@ const expectToOpen = (server, done) => {
   return newPromise;
 };
 
+/**
+ * Attempt to stop a given {@linkcode server} and expect it be closing.
+ * Passes {linkcode done} to {@link Mongod#close}.
+ * @argument {Mongod} server
+ * @argument {Mongod~callback} [done]
+ * @return {undefined}
+ */
 const expectToClose = (server, done) => {
   const oldPromise = server.openPromise;
   const newPromise = server.close(done);
@@ -170,7 +211,8 @@ storage:
     it('constructs a new instance', () => {
       const server = new Mongod();
 
-      expectEmpty(server);
+      expectIdle(server);
+      expect(server.process).to.equal(null);
     });
     it('throws when invoked without the `new` keyword', () => {
       expect(Mongod).to.throw();
@@ -178,20 +220,23 @@ storage:
     it('accepts a port as a string', () => {
       const server = new Mongod('1234');
 
-      expectEmpty(server);
+      expectIdle(server);
+      expect(server.process).to.equal(null);
       expect(server.config.port).to.equal('1234');
     });
     it('accepts a port as a number', () => {
       const server = new Mongod(1234);
 
-      expectEmpty(server);
+      expectIdle(server);
+      expect(server.process).to.equal(null);
       expect(server.config.port).to.equal(1234);
     });
     it('accepts a configuration object', () => {
       const config = { bin, port, dbpath };
       const server = new Mongod(config);
 
-      expectEmpty(server);
+      expectIdle(server);
+      expect(server.process).to.equal(null);
 
       for (let key of Object.keys(config)) {
         expect(server.config).to.have.property(key).equal(config[key]);

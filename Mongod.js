@@ -140,9 +140,18 @@ class Mongod extends events.EventEmitter {
       }
 
       return new Promise((resolve, reject) => {
+        /**
+         * Parse a given {@linkcode match} and return a {@linkcode Boolean}
+         * indicating if more are expected. Returns {@linkcode true} when a
+         * given {@linkcode match} results in the current {@link Promise}
+         * being resolved or rejected.
+         * @argument {String} match
+         * @return {Boolean}
+         */
         const matchHandler = (match) => {
           let err = null;
-          let k, v;
+          let k = null;
+          let v = null;
 
           if (errorRE.test(match)) {
             k = 'error';
@@ -203,6 +212,13 @@ class Mongod extends events.EventEmitter {
           return true;
         };
 
+        /**
+         * A handler to parse data from the server's stdout and stderr and
+         * forward {@link keyRE} matches to {@link matchHandler} until it
+         * resolves or rejects the current {@link Promise}.
+         * @argument {Buffer} data
+         * @return {undefined}
+         */
         const dataHandler = Mongod.getTextLineAggregator((value) => {
           const matches = value.match(keyRE);
 
@@ -218,10 +234,21 @@ class Mongod extends events.EventEmitter {
           }
         });
 
+        /**
+         * A handler to close the server when the current process exits.
+         * @return {undefined}
+         */
         const exitHandler = () => {
           server.close();
         };
 
+        /**
+         * Get a text line aggregator that emits a given {@linkcode event}
+         * for the current server.
+         * @argument {String} event
+         * @return {Function}
+         * {@see Mongod.getTextLineAggregator}
+         */
         const getDataPropagator = (event) =>
           Mongod.getTextLineAggregator((line) => server.emit(event, line));
 
@@ -300,7 +327,7 @@ class Mongod extends events.EventEmitter {
       bin: 'mongod',
       conf: null,
       port: 27017,
-      dbpath: null,
+      dbpath: null
     };
 
     /**
