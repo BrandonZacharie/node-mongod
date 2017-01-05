@@ -463,5 +463,14 @@ storage:
         expectIdle(server);
       });
     });
+    it('should stop a server when the process exits', () => {
+      const server = new Mongod({ dbpath, port: generateRandomPort() });
+
+      return server.open().then(() => {
+        process.emit('exit');
+
+        return promisify((done) => server.on('close', done));
+      });
+    });
   });
 });
