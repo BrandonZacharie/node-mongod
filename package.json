@@ -24,8 +24,8 @@
   "scripts": {
     "test": "./node_modules/.bin/mocha --bail test",
     "test+coverage": "./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha --report lcovonly -- --reporter dot",
-    "lint": "./node_modules/.bin/jshint Mongod.js",
     "ci": "npm run lint && npm run test+coverage && cat ./coverage/lcov.info | ./node_modules/.bin/coveralls"
+    "lint": "node_modules/.bin/eslint --ignore-path .gitignore **/*.js"
   },
   "dependencies": {
     "promise-queue": "^2.2.3"
@@ -33,8 +33,8 @@
   "devDependencies": {
     "chai": "^3.5.0",
     "coveralls": "^2.11.15",
+    "eslint": "^3.12.2",
     "istanbul": "^0.4.5",
-    "jshint": "^2.9.4",
     "mocha": "^3.1.2"
   }
 }
