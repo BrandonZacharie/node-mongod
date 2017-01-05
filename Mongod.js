@@ -417,7 +417,9 @@ class Mongod extends events.EventEmitter {
     const promise = Mongod.open(this, false);
 
     if (typeof callback === 'function') {
-      promise.then(callback).catch(callback);
+      promise
+      .then((v) => callback(null, v))
+      .catch((e) => callback(e, null));
     }
 
     return promise;
@@ -432,7 +434,9 @@ class Mongod extends events.EventEmitter {
     const promise = Mongod.close(this, false);
 
     if (typeof callback === 'function') {
-      promise.then(callback).catch(callback);
+      promise
+      .then((v) => callback(null, v))
+      .catch((e) => callback(e, null));
     }
 
     return promise;
