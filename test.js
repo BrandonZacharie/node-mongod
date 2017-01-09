@@ -4,6 +4,7 @@ const childprocess = require('child_process');
 const fs = require('fs');
 const chai = require('chai');
 const mocha = require('mocha');
+const jsyaml = require('js-yaml');
 const Mongod = require('./Mongod');
 const expect = chai.expect;
 const after = mocha.after;
@@ -170,15 +171,20 @@ describe('Mongod', function () {
     childprocess.exec('rm -rf data/db/*', done);
   });
   before((done) => {
-    const data = `
-net:
-  bindIp: 127.0.0.1
-  port: ${port}
-storage:
-  dbPath: ${dbpath}
-    `.trim();
+    const yaml = jsyaml.dump({
+      net: {
+        bindIp: '127.0.0.1',
+        port
+      },
+      storage: {
+        dbPath: dbpath,
+        journal: {
+          enabled: false
+        }
+      }
+    });
 
-    fs.writeFile(conf, data, done);
+    fs.writeFile(conf, yaml, done);
   });
   after((done) => {
     fs.unlink(conf, done);
