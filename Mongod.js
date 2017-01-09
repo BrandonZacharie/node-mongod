@@ -6,7 +6,8 @@
  * @property {String} [bin=mongod]
  * @property {String} [config]
  * @property {(Number|String)} [port=27017]
- * @property {(String)} [dbpath]
+ * @property {String} [dbpath]
+ * @property {String} [storageEngine]
  */
 
 /**
@@ -17,10 +18,12 @@
 
 const childprocess = require('child_process');
 const events = require('events');
-const keyRE = /(pid=\d+)|(port=\d+)|(waiting\s+for\s+connections)|(already\s+in\s+use)|(denied\s+for\s+socket)|((error|exception|badvalue)(.|\n)*)/ig;
-const errorRE = /^error|exception|badvalue/i;
-const whiteSpaceRE = / /ig;
-const newlineRE = /\r?\n/;
+const PromiseQueue = require('promise-queue');
+const regExp = {
+  terminalMessage: /waiting\s+for\s+connections|already\s+in\s+use|denied|error|exception|badvalue/im,
+  whiteSpace: /\s/g,
+  newline: /\r?\n/
+};
 
 /**
  * Start and stop a local MongoDB server like a boss.
@@ -38,7 +41,7 @@ class Mongod extends events.EventEmitter {
     let buffer = '';
 
     return (data) => {
-      const fragments = data.toString().split(newlineRE);
+      const fragments = data.toString().split(regExp.newline);
       const lines = fragments.slice(0, fragments.length - 1);
 
       // If there was an unended line in the previous dump, complete it by
@@ -73,6 +76,16 @@ class Mongod extends events.EventEmitter {
       return target;
     }
 
+    if (typeof source === 'number' || typeof source === 'string') {
+      target.port = source;
+
+      return target;
+    }
+
+    if (typeof source !== 'object') {
+      return target;
+    }
+
     if (source.bin != null) {
       target.bin = source.bin;
     }
@@ -81,6 +94,10 @@ class Mongod extends events.EventEmitter {
       target.conf = source.conf;
 
       return target;
+    }
+
+    if (source.storageEngine != null) {
+      target.storageEngine = source.storageEngine;
     }
 
     if (source.dbpath != null) {
@@ -107,6 +124,10 @@ class Mongod extends events.EventEmitter {
 
     const flags = [];
 
+    if (config.storageEngine != null) {
+      flags.push('--storageEngine', config.storageEngine);
+    }
+
     if (config.dbpath != null) {
       flags.push('--dbpath', config.dbpath);
     }
@@ -119,141 +140,148 @@ class Mongod extends events.EventEmitter {
   }
 
   /**
+   * Parse MongoDB server output for terminal messages.
+   * @protected
+   * @argument {String} string
+   * @return {Object}
+   */
+  static parseData(string) {
+    const matches = regExp.terminalMessage.exec(string);
+
+    if (matches === null) {
+      return null;
+    }
+
+    const result = {
+      err: null,
+      key: matches
+      .pop()
+      .replace(regExp.whiteSpace, '')
+      .toLowerCase()
+    };
+
+    switch (result.key) {
+      case 'waitingforconnections':
+        break;
+
+      case 'alreadyinuse':
+        result.err = new Error('Address already in use');
+        result.err.code = -1;
+
+        break;
+
+      case 'denied':
+        result.err = new Error('Permission denied');
+        result.err.code = -2;
+
+        break;
+
+      case 'error':
+      case 'exception':
+      case 'badvalue':
+        result.err = new Error(string.trim());
+        result.err.code = -3;
+
+        break;
+    }
+
+    return result;
+  }
+
+  /**
    * Start a given {@link Mongod}.
    * @protected
    * @argument {Mongod} server
-   * @argument {Boolean} isCallback
    * @return {Promise}
    */
-  static open(server, isCallback) {
-    if (server.isClosing) {
-      server.openPromise = new Promise((resolve, reject) => {
-        const open = () =>
-          Mongod.open(server, true).then(resolve).catch(reject);
-
-        server.isClosing = false;
-        server.isOpening = true;
-
-        server.closePromise.then(open).catch(open);
-      });
-
+  static open(server) {
+    if (server.isOpening) {
       return server.openPromise;
     }
 
-    if (server.isOpening && !isCallback || server.isRunning) {
-      return server.openPromise;
-    }
+    server.isOpening = true;
+    server.isClosing = false;
+    server.openPromise = server.promiseQueue.add(() => {
+      if (server.isClosing || server.isRunning) {
+        server.isOpening = false;
 
-    server.openPromise = new Promise((resolve, reject) => {
-      const matchHandler = (match) => {
-        let err = null;
-        let k, v;
+        return Promise.resolve(null);
+      }
 
-        if (errorRE.test(match)) {
-          k = 'error';
-          v = match.trim();
-        }
-        else {
-          const t = match.split('=');
+      return new Promise((resolve, reject) => {
+        /**
+         * A listener for the current server process' stdout/stderr that
+         * resolves or rejects the current {@link Promise} when done.
+         * @see Mongod.getTextLineAggregator
+         * @see Mongod.parseData
+         * @argument {Buffer} buffer
+         * @return {undefined}
+         */
+        const dataListener = Mongod.getTextLineAggregator((value) => {
+          const result = Mongod.parseData(value);
 
-          k = t[0].replace(whiteSpaceRE, '').toLowerCase();
-          v = t[1];
-        }
+          if (result === null) {
+            return;
+          }
 
-        switch (k) {
-          case 'error':
-            err = new Error(v);
-            err.code = -1;
+          server.process.stdout.removeListener('data', dataListener);
 
-            break;
+          server.isOpening = false;
 
-          case 'alreadyinuse':
-            err = new Error('Address already in use');
-            err.code = -2;
-
-            break;
-
-          case 'deniedforsocket':
-            err = new Error('Permission denied');
-            err.code = -3;
-
-            break;
-
-          case 'pid':
-          case 'port':
-            server[k] = Number(v);
-
-            return false;
-
-          case 'waitingforconnections':
+          if (result.err === null) {
             server.isRunning = true;
 
             server.emit('open');
-
-            break;
-
-          default:
-            return false;
-        }
-
-        server.isOpening = false;
-
-        if (err === null) {
-          resolve(null);
-        }
-        else {
-          reject(err);
-        }
-
-        return true;
-      };
-
-      const dataHandler = Mongod.getTextLineAggregator((value) => {
-        const matches = value.match(keyRE);
-
-        if (matches !== null) {
-          for (let match of matches) {
-            if (matchHandler(match, value)) {
-              server.process.stdout.removeListener('data', dataHandler);
-              server.process.stderr.removeListener('data', dataHandler);
-
-              return;
-            }
+            resolve(null);
           }
-        }
+          else {
+            server.isClosing = true;
+
+            server.emit('closing');
+            server.process.once('close', () => reject(result.err));
+          }
+        });
+
+        /**
+         * A listener to close the server when the current process exits.
+         * @return {undefined}
+         */
+        const exitListener = () => {
+          // istanbul ignore next
+          server.close();
+        };
+
+        /**
+         * Get a text line aggregator that emits a given {@linkcode event}
+         * for the current server.
+         * @see Mongod.getTextLineAggregator
+         * @argument {String} event
+         * @return {Function}
+         */
+        const getDataPropagator = (event) =>
+          Mongod.getTextLineAggregator((line) => server.emit(event, line));
+
+        server.emit('opening');
+
+        server.process = childprocess.spawn(
+          server.config.bin,
+          Mongod.parseFlags(server.config)
+        );
+
+        server.process.stderr.on('data', dataListener);
+        server.process.stderr.on('data', getDataPropagator('stderr'));
+        server.process.stdout.on('data', dataListener);
+        server.process.stdout.on('data', getDataPropagator('stdout'));
+        server.process.on('close', () => {
+          server.process = null;
+          server.isRunning = false;
+          server.isClosing = false;
+
+          process.removeListener('exit', exitListener);
+          server.emit('close');
+        });
+        process.on('exit', exitListener);
       });
-
-      const exitHandler = () => {
-        server.close();
-      };
-
-      const getDataPropagator = (event) =>
-        Mongod.getTextLineAggregator((line) => server.emit(event, line));
-
-      server.isOpening = true;
-
-      server.emit('opening');
-
-      server.process = childprocess.spawn(
-        server.config.bin,
-        Mongod.parseFlags(server.config)
-      );
-
-      server.process.stderr.on('data', dataHandler);
-      server.process.stderr.on('data', getDataPropagator('stderr'));
-      server.process.stdout.on('data', dataHandler);
-      server.process.stdout.on('data', getDataPropagator('stdout'));
-      server.process.on('close', () => {
-        server.process = null;
-        server.port = null;
-        server.pid = null;
-        server.isRunning = false;
-        server.isClosing = false;
-
-        process.removeListener('exit', exitHandler);
-        server.emit('close');
-      });
-      process.on('exit', exitHandler);
     });
 
     return server.openPromise;
@@ -263,34 +291,27 @@ class Mongod extends events.EventEmitter {
    * Stop a given {@link Mongod}.
    * @protected
    * @argument {Mongod} server
-   * @argument {Boolean} isCallback
    * @return {Promise}
    */
-  static close(server, isCallback) {
-    if (server.isOpening) {
-      server.closePromise = new Promise((resolve, reject) => {
-        const close = () =>
-          exports.close(server, true).then(resolve).catch(reject);
+  static close(server) {
+    if (server.isClosing) {
+      return server.closePromise;
+    }
 
-        server.isOpening = false;
-        server.isClosing = true;
+    server.isClosing = true;
+    server.isOpening = false;
+    server.closePromise = server.promiseQueue.add(() => {
+      if (server.isOpening || !server.isRunning) {
+        server.isClosing = false;
 
-        server.openPromise.then(close).catch(close);
+        return Promise.resolve(null);
+      }
+
+      return new Promise((resolve) => {
+        server.emit('closing');
+        server.process.once('close', () => resolve(null));
+        server.process.kill();
       });
-
-      return server.closePromise;
-    }
-
-    if (server.isClosing && !isCallback || !server.isRunning) {
-      return server.closePromise;
-    }
-
-    server.closePromise = new Promise((resolve) => {
-      server.isClosing = true;
-
-      server.emit('closing');
-      server.process.once('close', () => resolve(null));
-      server.process.kill();
     });
 
     return server.closePromise;
@@ -309,26 +330,13 @@ class Mongod extends events.EventEmitter {
      * @protected
      * @type {Mongod~Config}
      */
-    this.config = {
+    this.config = Mongod.parseConfig(configOrPort, {
       bin: 'mongod',
       conf: null,
       port: 27017,
       dbpath: null,
-    };
-
-    /**
-     * The current {@link Mongod#process} identifier.
-     * @protected
-     * @type {Number}
-     */
-    this.pid = null;
-
-    /**
-     * The port the MongoDB server is currently bound to.
-     * @protected
-     * @type {Number}
-     */
-    this.port = null;
+      storageEngine: null
+    });
 
     /**
      * The current process.
@@ -350,6 +358,13 @@ class Mongod extends events.EventEmitter {
      * @type {Promise}
      */
     this.closePromise = Promise.resolve(null);
+
+    /**
+     * A serial queue of open and close promises.
+     * @protected
+     * @type {PromiseQueue}
+     */
+    this.promiseQueue = new PromiseQueue(1);
 
     /**
      * Determine if the instance is closing a MongoDB server; {@linkcode true}
@@ -377,14 +392,6 @@ class Mongod extends events.EventEmitter {
      * @type {Boolean}
      */
     this.isOpening = false;
-
-    // Parse the given {@link Mongod~Config}.
-    if (typeof configOrPort === 'number' || typeof configOrPort === 'string') {
-      this.config.port = configOrPort;
-    }
-    else if (typeof configOrPort === 'object') {
-      Mongod.parseConfig(configOrPort, this.config);
-    }
   }
 
   /**
@@ -393,13 +400,13 @@ class Mongod extends events.EventEmitter {
    * @return {Promise}
    */
   open(callback) {
-    const promise = Mongod.open(this, false);
+    const promise = Mongod.open(this);
 
-    if (typeof callback === 'function') {
-      promise.then(callback).catch(callback);
-    }
-
-    return promise;
+    return typeof callback === 'function'
+    ? promise
+      .then((v) => callback(null, v))
+      .catch((e) => callback(e, null))
+    : promise;
   }
 
   /**
@@ -408,13 +415,13 @@ class Mongod extends events.EventEmitter {
    * @return {Promise}
    */
   close(callback) {
-    const promise = Mongod.close(this, false);
+    const promise = Mongod.close(this);
 
-    if (typeof callback === 'function') {
-      promise.then(callback).catch(callback);
-    }
-
-    return promise;
+    return typeof callback === 'function'
+    ? promise
+      .then((v) => callback(null, v))
+      .catch((e) => callback(e, null))
+    : promise;
   }
 }
 

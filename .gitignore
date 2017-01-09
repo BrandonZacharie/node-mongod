@@ -3,3 +3,4 @@ coverage
 data
 .DS_Store
 *.conf
+*.log
