@@ -8,6 +8,7 @@
  * @property {(Number|String)} [port=27017]
  * @property {String} [dbpath]
  * @property {String} [storageEngine]
+ * @property {Boolean} [nojournal=false]
  */
 
 /**
@@ -96,6 +97,10 @@ class Mongod extends events.EventEmitter {
       return target;
     }
 
+    if (source.nojournal === true) {
+      target.nojournal = true;
+    }
+
     if (source.storageEngine != null) {
       target.storageEngine = source.storageEngine;
     }
@@ -123,6 +128,10 @@ class Mongod extends events.EventEmitter {
     }
 
     const flags = [];
+
+    if (config.nojournal) {
+      flags.push('--nojournal');
+    }
 
     if (config.storageEngine != null) {
       flags.push('--storageEngine', config.storageEngine);
@@ -335,7 +344,8 @@ class Mongod extends events.EventEmitter {
       conf: null,
       port: 27017,
       dbpath: null,
-      storageEngine: null
+      storageEngine: null,
+      nojournal: false
     });
 
     /**

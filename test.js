@@ -153,6 +153,7 @@ describe('Mongod', function () {
   const port = generateRandomPort();
   const dbpath = generateRandomPath();
   const storageEngine = 'inMemory';
+  const nojournal = true;
 
   this.timeout(15000);
   before((done) => {
@@ -233,7 +234,7 @@ describe('Mongod', function () {
       expect(config.port).to.equal(port);
     });
     it('accepts a configuration object', () => {
-      const expectedObject = { bin, port, dbpath, storageEngine };
+      const expectedObject = { bin, port, dbpath, storageEngine, nojournal };
       const actualObject = Mongod.parseConfig(expectedObject);
 
       expect(actualObject).to.eql(expectedObject);
@@ -244,9 +245,10 @@ describe('Mongod', function () {
       expect(Mongod.parseFlags({})).to.have.length(0);
     });
     it('should return port, dbpath, and storageEngine', () => {
-      const config = { bin, port, dbpath, storageEngine };
+      const config = { bin, port, dbpath, storageEngine, nojournal };
       const actualFlags = Mongod.parseFlags(config);
       const expectedFlags = [
+        '--nojournal',
         '--storageEngine',
         config.storageEngine,
         '--dbpath',
