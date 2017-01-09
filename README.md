@@ -31,12 +31,13 @@ server.open((err) => {
 
 ### Configuration
 
-| Property | Type   | Default      | Description
-|:---------|:-------|:-------------|:-----------
-| bin      | String | mongod       | A path to a MongoDB server binary.
-| conf     | String |              | A path to a MongoDB server configuration file.
-| dbpath   | String |              | A path to a to store MongoDB server files.
-| port     | Number | 27017        | A port to bind a server to.
+| Property      | Type   | Default | Description
+|:--------------|:-------|:--------|:-----------
+| bin           | String | mongod  | A path to a MongoDB server binary.
+| conf          | String |         | A path to a MongoDB server configuration file.
+| dbpath        | String |         | A path to a to store MongoDB server files.
+| storageEngine | String |         | A MongoDB storage engine (i.e. WiredTiger).
+| port          | Number | 27017   | A port to bind a server to.
 
 A MongoDB server binary must be available. If you do not have one in $PATH,
 provide a path in configuration.
