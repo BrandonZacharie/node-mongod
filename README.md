@@ -145,9 +145,17 @@ either closes or errs.
 
 Emitted when a MongoDB server prints to stdout or stderr.
 
+#### opening
+
+Emitted when attempting to start a MongoDB server.
+
 #### open
 
 Emitted when a MongoDB server becomes ready to service requests.
+
+#### closing
+
+Emitted when attempting to stop a MongoDB server.
 
 #### close
 
