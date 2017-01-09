@@ -7,6 +7,7 @@
  * @property {String} [config]
  * @property {(Number|String)} [port=27017]
  * @property {String} [dbpath]
+ * @property {String} [storageEngine]
  */
 
 /**
@@ -95,6 +96,10 @@ class Mongod extends events.EventEmitter {
       return target;
     }
 
+    if (source.storageEngine != null) {
+      target.storageEngine = source.storageEngine;
+    }
+
     if (source.dbpath != null) {
       target.dbpath = source.dbpath;
     }
@@ -118,6 +123,10 @@ class Mongod extends events.EventEmitter {
     }
 
     const flags = [];
+
+    if (config.storageEngine != null) {
+      flags.push('--storageEngine', config.storageEngine);
+    }
 
     if (config.dbpath != null) {
       flags.push('--dbpath', config.dbpath);
@@ -325,9 +334,9 @@ class Mongod extends events.EventEmitter {
       bin: 'mongod',
       conf: null,
       port: 27017,
-      dbpath: null
-    };
-
+      dbpath: null,
+      storageEngine: null
+    });
 
     /**
      * The current process.
