@@ -4,6 +4,7 @@ const childprocess = require('child_process');
 const fs = require('fs');
 const chai = require('chai');
 const mocha = require('mocha');
+const jsyaml = require('js-yaml');
 const Mongod = require('./Mongod');
 const expect = chai.expect;
 const after = mocha.after;
@@ -152,8 +153,8 @@ describe('Mongod', function () {
   const port = generateRandomPort();
   const dbpath = generateRandomPath();
   const storageEngine = 'inMemory';
+  const nojournal = true;
 
-  this.timeout(15000);
   before((done) => {
     childprocess.exec('pkill mongod', () => {
       done();
@@ -170,15 +171,20 @@ describe('Mongod', function () {
     childprocess.exec('rm -rf data/db/*', done);
   });
   before((done) => {
-    const data = `
-net:
-  bindIp: 127.0.0.1
-  port: ${port}
-storage:
-  dbPath: ${dbpath}
-    `.trim();
+    const yaml = jsyaml.dump({
+      net: {
+        bindIp: '127.0.0.1',
+        port
+      },
+      storage: {
+        dbPath: dbpath,
+        journal: {
+          enabled: false
+        }
+      }
+    });
 
-    fs.writeFile(conf, data, done);
+    fs.writeFile(conf, yaml, done);
   });
   after((done) => {
     fs.unlink(conf, done);
@@ -227,7 +233,7 @@ storage:
       expect(config.port).to.equal(port);
     });
     it('accepts a configuration object', () => {
-      const expectedObject = { bin, port, dbpath, storageEngine };
+      const expectedObject = { bin, port, dbpath, storageEngine, nojournal };
       const actualObject = Mongod.parseConfig(expectedObject);
 
       expect(actualObject).to.eql(expectedObject);
@@ -238,9 +244,10 @@ storage:
       expect(Mongod.parseFlags({})).to.have.length(0);
     });
     it('should return port, dbpath, and storageEngine', () => {
-      const config = { bin, port, dbpath, storageEngine };
+      const config = { bin, port, dbpath, storageEngine, nojournal };
       const actualFlags = Mongod.parseFlags(config);
       const expectedFlags = [
+        '--nojournal',
         '--storageEngine',
         config.storageEngine,
         '--dbpath',
@@ -337,7 +344,11 @@ storage:
   });
   describe('#open()', () => {
     it('should start a server and execute a callback', () => {
-      const server = new Mongod({ dbpath, port: generateRandomPort() });
+      const server = new Mongod({
+        nojournal,
+        dbpath,
+        port: generateRandomPort()
+      });
 
       return expectToOpen(server, (err, res) => {
         expect(err).to.equal(null);
@@ -356,7 +367,11 @@ storage:
       });
     });
     it('should start a server and resolve a promise', () => {
-      const server = new Mongod({ dbpath, port: generateRandomPort() });
+      const server = new Mongod({
+        nojournal,
+        dbpath,
+        port: generateRandomPort()
+      });
 
       return expectToOpen(server).then((res) => {
         expectRunning(server);
@@ -366,7 +381,11 @@ storage:
       });
     });
     it('should do nothing when a server is already starting', () => {
-      const server = new Mongod({ dbpath, port: generateRandomPort() });
+      const server = new Mongod({
+        nojournal,
+        dbpath,
+        port: generateRandomPort()
+      });
       let openingCount = 0;
       let openCount = 0;
 
@@ -389,7 +408,11 @@ storage:
       });
     });
     it('should do nothing when a server is already started', () => {
-      const server = new Mongod({ dbpath, port: generateRandomPort() });
+      const server = new Mongod({
+        nojournal,
+        dbpath,
+        port: generateRandomPort()
+      });
       let openingCount = 0;
       let openCount = 0;
 
@@ -407,21 +430,21 @@ storage:
       });
     });
     it('should fail to start a server with a bad dbpath', () => {
-      const server = new Mongod({ dbpath: 'fubar', port });
+      const server = new Mongod({ nojournal, dbpath: 'fubar', port });
 
       return server.open((err) => {
         expect(err).to.be.an('error').and.have.property('code').equal(-3);
       });
     });
     it('should fail to start a server with a bad port', () => {
-      const server = new Mongod({ dbpath, port: 'fubar' });
+      const server = new Mongod({ nojournal, dbpath, port: 'fubar' });
 
       return server.open((err) => {
         expect(err).to.be.an('error').and.have.property('code').equal(-3);
       });
     });
     it('should fail to start a server with a privileged port', () => {
-      const server = new Mongod({ dbpath, port: 1 });
+      const server = new Mongod({ nojournal, dbpath, port: 1 });
 
       return server.open((err) => {
         expect(err).to.be.an('error').and.have.property('code').equal(-2);
@@ -429,8 +452,16 @@ storage:
     });
     it('should fail to start a server on an in-use port', () => {
       const port = generateRandomPort();
-      const server1 = new Mongod({ dbpath: generateRandomPath(), port });
-      const server2 = new Mongod({ dbpath: generateRandomPath(), port });
+      const server1 = new Mongod({
+        nojournal,
+        dbpath: generateRandomPath(),
+        port
+      });
+      const server2 = new Mongod({
+        nojournal,
+        dbpath: generateRandomPath(),
+        port
+      });
 
       return Promise.all([
         mkdbpath(server1),
@@ -444,14 +475,17 @@ storage:
       }));
     });
     it('should start a server with a given port', () => {
-      const expectedPort = generateRandomPort();
-      const server = new Mongod({ dbpath, port: expectedPort });
+      const server = new Mongod({
+        nojournal,
+        dbpath,
+        port: generateRandomPort()
+      });
       let actualPort = null;
 
       parsePort(server, (port) => actualPort = port);
 
       return expectToOpen(server).then(() => {
-        expect(actualPort).to.equal(expectedPort);
+        expect(actualPort).to.equal(server.config.port);
 
         return server.close();
       });
@@ -469,12 +503,16 @@ storage:
       });
     });
     it('should start a server with a given MongoDB binary', () => {
-      const server = new Mongod({ dbpath, bin, port });
+      const server = new Mongod({ nojournal, dbpath, bin, port });
 
       return expectToOpen(server).then(() => server.close());
     });
     it('should start a server after #close() finishes', () => {
-      const server = new Mongod({ dbpath, port: generateRandomPort() });
+      const server = new Mongod({
+        nojournal,
+        dbpath,
+        port: generateRandomPort()
+      });
 
       return Promise.all([
         server.open(),
@@ -491,14 +529,17 @@ storage:
     });
     it('should start a server while others run on different ports', () => {
       const server1 = new Mongod({
+        nojournal,
         dbpath: generateRandomPath(),
         port: generateRandomPort()
       });
       const server2 = new Mongod({
+        nojournal,
         dbpath: generateRandomPath(),
         port: generateRandomPort()
       });
       const server3 = new Mongod({
+        nojournal,
         dbpath: generateRandomPath(),
         port: generateRandomPort()
       });
@@ -526,7 +567,11 @@ storage:
       });
     });
     it('emits "opening" and "open" when starting a server', () => {
-      const server = new Mongod({ dbpath, port: generateRandomPort() });
+      const server = new Mongod({
+        nojournal,
+        dbpath,
+        port: generateRandomPort()
+      });
       let openingCount = 0;
       let openCount = 0;
 
@@ -544,7 +589,7 @@ storage:
       });
     });
     it('emits "closing" and "close" when failing to start a server', () => {
-      const server = new Mongod({ dbpath, port: 'fubar' });
+      const server = new Mongod({ nojournal, dbpath, port: 'fubar' });
       let closingCount = 0;
       let closeCount = 0;
 
@@ -569,18 +614,30 @@ storage:
   });
   describe('#close()', () => {
     it('should close a server and execute a callback', () => {
-      const server = new Mongod({ dbpath, port: generateRandomPort() });
+      const server = new Mongod({
+        nojournal,
+        dbpath,
+        port: generateRandomPort()
+      });
 
       return server.open()
       .then(() => promisify((done) => expectToClose(server, done)));
     });
     it('should close a server and resolve a promise', () => {
-      const server = new Mongod({ dbpath, port: generateRandomPort() });
+      const server = new Mongod({
+        nojournal,
+        dbpath,
+        port: generateRandomPort()
+      });
 
       return server.open().then(() => expectToClose(server));
     });
     it('should report any error when applicable', () => {
-      const server = new Mongod({ dbpath, port: generateRandomPort() });
+      const server = new Mongod({
+        nojournal,
+        dbpath,
+        port: generateRandomPort()
+      });
       const close = Mongod.close;
 
       Mongod.close = () =>
@@ -598,7 +655,11 @@ storage:
       });
     });
     it('should do nothing when a server is already stopping', () => {
-      const server = new Mongod({ dbpath, port: generateRandomPort() });
+      const server = new Mongod({
+        nojournal,
+        dbpath,
+        port: generateRandomPort()
+      });
 
       return server.open().then(() => {
         expect(server.close()).to.equal(server.close());
@@ -607,7 +668,11 @@ storage:
       });
     });
     it('should do nothing when a server is already stopped', () => {
-      const server = new Mongod({ dbpath, port: generateRandomPort() });
+      const server = new Mongod({
+        nojournal,
+        dbpath,
+        port: generateRandomPort()
+      });
 
       return server.open()
       .then(() => server.close())
@@ -625,7 +690,11 @@ storage:
       expectIdle(server);
     });
     it('should stop a server after #open() finishes', () => {
-      const server = new Mongod({ dbpath, port: generateRandomPort() });
+      const server = new Mongod({
+        nojournal,
+        dbpath,
+        port: generateRandomPort()
+      });
 
       return Promise.all([
         server.open(),
@@ -640,7 +709,11 @@ storage:
   });
   describe('#isOpening', () => {
     it('is `true` while a server is starting', () => {
-      const server = new Mongod({ dbpath, port: generateRandomPort() });
+      const server = new Mongod({
+        nojournal,
+        dbpath,
+        port: generateRandomPort()
+      });
 
       expect(server.isOpening).to.equal(false);
       server.open();
@@ -659,7 +732,7 @@ storage:
       });
     });
     it('is `true` while a misconfigured server is starting', () => {
-      const server = new Mongod({ dbpath, port: 'badport' });
+      const server = new Mongod({ nojournal, dbpath, port: 'badport' });
 
       expect(server.isOpening).to.equal(false);
       server.open();
@@ -680,7 +753,11 @@ storage:
   });
   describe('#isClosing', () => {
     it('is `true` while a server is stopping', () => {
-      const server = new Mongod({ dbpath, port: generateRandomPort() });
+      const server = new Mongod({
+        nojournal,
+        dbpath,
+        port: generateRandomPort()
+      });
 
       expect(server.isClosing).to.equal(false);
       server.open();
@@ -699,7 +776,7 @@ storage:
       });
     });
     it('is `true` when a server fails to start', () => {
-      const server = new Mongod({ dbpath, port: 'badport' });
+      const server = new Mongod({ nojournal, dbpath, port: 'badport' });
       let isClosing = false;
 
       server.on('closing', () => isClosing = server.isClosing);
@@ -723,7 +800,11 @@ storage:
   });
   describe('#isRunning', () => {
     it('is `true` while a server accepts connections', () => {
-      const server = new Mongod({ dbpath, port: generateRandomPort() });
+      const server = new Mongod({
+        nojournal,
+        dbpath,
+        port: generateRandomPort()
+      });
 
       expect(server.isRunning).to.equal(false);
       server.open();
@@ -742,7 +823,7 @@ storage:
       });
     });
     it('is `false` after a misconfigured server starts', () => {
-      const server = new Mongod({ dbpath, port: 'badport' });
+      const server = new Mongod({ nojournal, dbpath, port: 'badport' });
 
       expect(server.isRunning).to.equal(false);
       server.open();

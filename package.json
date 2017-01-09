@@ -6,7 +6,7 @@
     "server",
     "manager"
   ],
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "MIT",
   "homepage": "https://github.com/BrandonZacharie/node-mongod#readme",
   "bugs": {
@@ -33,6 +33,7 @@
     "coveralls": "^2.11.15",
     "eslint": "^3.13.0",
     "istanbul": "^0.4.5",
+    "js-yaml": "^3.7.0",
     "mocha": "^3.1.2"
   }
 }
