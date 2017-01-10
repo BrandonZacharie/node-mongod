@@ -706,6 +706,28 @@ describe('Mongod', function () {
         expectIdle(server);
       });
     });
+    it('emits "closing" and "close" when stopping a server', () => {
+      const server = new Mongod({
+        nojournal,
+        dbpath,
+        port: generateRandomPort()
+      });
+      let closingCount = 0;
+      let closeCount = 0;
+
+      server.on('closing', () => ++closingCount);
+      server.on('close', () => ++closeCount);
+
+      return server.open()
+      .then(() => server.close())
+      .then(() => server.open())
+      .then(() => server.close())
+      .then(() => server.close())
+      .then(() => {
+        expect(closingCount).to.equal(2);
+        expect(closeCount).to.equal(2);
+      });
+    });
   });
   describe('#isOpening', () => {
     it('is `true` while a server is starting', () => {
