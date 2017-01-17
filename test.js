@@ -1,8 +1,8 @@
 'use strict';
 
 const childprocess = require('child_process');
-const fs = require('fs');
 const chai = require('chai');
+const fspromise = require('fs-promise');
 const jsyaml = require('js-yaml');
 const mocha = require('mocha');
 const uuid = require('uuid');
@@ -51,7 +51,7 @@ const promisify = (delegate) =>
  * @return {Promise}
  */
 const mkdir = (dir) =>
-  promisify((done) => childprocess.exec(`mkdir -p ${dir}`, done));
+  fspromise.mkdirs(dir);
 
 /**
  * Make the dbpath directory for a given {@linkcode server}.
@@ -168,10 +168,8 @@ describe('Mongod', () => {
       done(err);
     });
   });
-  before((done) => {
-    childprocess.exec('rm -rf data/db/*', done);
-  });
-  before((done) => {
+  before(() => fspromise.emptyDir('data/db'));
+  before(() => {
     const yaml = jsyaml.dump({
       net: {
         bindIp: '127.0.0.1',
@@ -185,12 +183,10 @@ describe('Mongod', () => {
       }
     });
 
-    fs.writeFile(conf, yaml, done);
-  });
-  after((done) => {
-    fs.unlink(conf, done);
+    return fspromise.writeFile(conf, yaml);
   });
   before(() => mkdir(dbpath));
+  after(() => fspromise.unlink(conf));
   describe('.parseConfig()', () => {
     it('should parse bin, port, and dbpath', () => {
       const expectedObject = { bin, port, dbpath };
