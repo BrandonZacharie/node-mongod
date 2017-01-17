@@ -23,7 +23,7 @@ const server = new Mongod(27017);
 server.open((err) => {
   if (err === null) {
     // You may now connect a client to the MongoDB
-    // server bound to `server.port` (e.g. 27017).
+    // server bound to port 27017.
   }
 });
 

@@ -3,8 +3,9 @@
 const childprocess = require('child_process');
 const fs = require('fs');
 const chai = require('chai');
-const mocha = require('mocha');
 const jsyaml = require('js-yaml');
+const mocha = require('mocha');
+const uuid = require('uuid');
 const Mongod = require('./Mongod');
 const expect = chai.expect;
 const after = mocha.after;
@@ -24,7 +25,7 @@ const generateRandomPort = () =>
  * @return {Number}
  */
 const generateRandomPath = () =>
-  `data/db/${generateRandomPort()}`;
+  `data/db/${uuid.v4()}`;
 
 /**
  * Get a {@link Promise} that is resolved or rejected when the given
@@ -147,7 +148,7 @@ const parsePort = (server, callback) => {
   server.on('stdout', listener);
 };
 
-describe('Mongod', function () {
+describe('Mongod', () => {
   let bin = null;
   const conf = `${new Date().toISOString()}.conf`;
   const port = generateRandomPort();
@@ -704,6 +705,28 @@ describe('Mongod', function () {
       ])
       .then(() => {
         expectIdle(server);
+      });
+    });
+    it('emits "closing" and "close" when stopping a server', () => {
+      const server = new Mongod({
+        nojournal,
+        dbpath,
+        port: generateRandomPort()
+      });
+      let closingCount = 0;
+      let closeCount = 0;
+
+      server.on('closing', () => ++closingCount);
+      server.on('close', () => ++closeCount);
+
+      return server.open()
+      .then(() => server.close())
+      .then(() => server.open())
+      .then(() => server.close())
+      .then(() => server.close())
+      .then(() => {
+        expect(closingCount).to.equal(2);
+        expect(closeCount).to.equal(2);
       });
     });
   });

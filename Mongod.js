@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Configuration options for a {@link Mongod}.
+ * Configuration options for {@link Mongod}.
  * @typedef {Object} Mongod~Config
  * @property {String} [bin=mongod]
  * @property {String} [config]
@@ -20,6 +20,15 @@
 const childprocess = require('child_process');
 const events = require('events');
 const PromiseQueue = require('promise-queue');
+
+/**
+ * A collection of regualar expressions used by {@link Mongod.parseData} to
+ * parse stdout and stderr messages.
+ * @see Mongod.parseData
+ * @readonly
+ * @private
+ * @type {Object.<String,RegExp>}
+ */
 const regExp = {
   terminalMessage: /waiting\s+for\s+connections|already\s+in\s+use|denied|error|exception|badvalue/im,
   whiteSpace: /\s/g,
@@ -278,7 +287,7 @@ class Mongod extends events.EventEmitter {
         );
 
         server.process.stderr.on('data', dataListener);
-        server.process.stderr.on('data', getDataPropagator('stderr'));
+        server.process.stderr.on('data', getDataPropagator('stdout'));
         server.process.stdout.on('data', dataListener);
         server.process.stdout.on('data', getDataPropagator('stdout'));
         server.process.on('close', () => {
