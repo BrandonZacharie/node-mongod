@@ -55,7 +55,7 @@ is based on [Keep a Changelog](http://keepachangelog.com/).
 
 - Initial release
 
-[Unreleased]: https://github.com/BrandonZacharie/node-mongod/compare/1.0.0...HEAD
+[2.0.0]: https://github.com/BrandonZacharie/node-mongod/compare/1.0.0...2.0.0
 [1.0.0]: https://github.com/BrandonZacharie/node-mongod/compare/0.2.0...1.0.0
 [0.2.0]: https://github.com/BrandonZacharie/node-mongod/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/BrandonZacharie/node-mongod/compare/0.0.1...0.1.0 
