@@ -278,7 +278,7 @@ class Mongod extends events.EventEmitter {
         );
 
         server.process.stderr.on('data', dataListener);
-        server.process.stderr.on('data', getDataPropagator('stderr'));
+        server.process.stderr.on('data', getDataPropagator('stdout'));
         server.process.stdout.on('data', dataListener);
         server.process.stdout.on('data', getDataPropagator('stdout'));
         server.process.on('close', () => {
