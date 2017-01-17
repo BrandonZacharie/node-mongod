@@ -6,7 +6,7 @@
     "server",
     "manager"
   ],
-  "version": "1.0.0",
+  "version": "2.0.0",
   "license": "MIT",
   "homepage": "https://github.com/BrandonZacharie/node-mongod#readme",
   "bugs": {
@@ -22,8 +22,10 @@
   },
   "main": "Mongod.js",
   "scripts": {
-    "test": "node_modules/.bin/istanbul cover -x test.js node_modules/.bin/_mocha",
-    "lint": "node_modules/.bin/eslint --ignore-path .gitignore **/*.js"
+    "test": "istanbul cover -x test.js _mocha",
+    "lint": "npm run eslint && npm run remark",
+    "eslint": "eslint --ignore-path .gitignore **/*.js",
+    "remark": "remark ."
   },
   "dependencies": {
     "promise-queue": "^2.2.3"
@@ -32,9 +34,12 @@
     "chai": "^3.5.0",
     "coveralls": "^2.11.15",
     "eslint": "^3.13.0",
+    "fs-promise": "^1.0.0",
     "istanbul": "^0.4.5",
     "js-yaml": "^3.7.0",
     "mocha": "^3.1.2",
+    "remark-cli": "^2.1.0",
+    "remark-preset-lint-recommended": "^1.0.0",
     "uuid": "^3.0.1"
   }
 }

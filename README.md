@@ -1,10 +1,19 @@
 # mongod
 
+[![NPM version](https://img.shields.io/npm/v/mongod.svg)](https://www.npmjs.com/package/mongod)
 [![Build Status](https://img.shields.io/travis/BrandonZacharie/node-mongod/master.svg)](https://travis-ci.org/BrandonZacharie/node-mongod)
 [![Coverage Status](https://img.shields.io/coveralls/BrandonZacharie/node-mongod/master.svg)](https://coveralls.io/github/BrandonZacharie/node-mongod?branch=master)
 [![License](https://img.shields.io/npm/l/redis-server.svg)](https://github.com/BrandonZacharie/node-mongod/blob/master/LICENSE.md)
 
 Start and stop a local MongoDB server in Node.js like a boss.
+
+## Installation
+
+```Bash
+
+npm install mongod
+
+```
 
 ## Usage
 
@@ -78,7 +87,7 @@ Attempt to open a MongoDB server. Returns a `Promise`.
 ``` JavaScript
 
 server.open().then(() => {
-  // You may now connect a client to the MongoDB server bound to `server.port`.
+  // You may now connect to the MongoDB server.
 });
 
 ```
@@ -89,7 +98,7 @@ server.open().then(() => {
 
 server.open((err) => {
   if (err === null) {
-    // You may now connect a client to the MongoDB server bound to `server.port`.
+    // You may now connect to the MongoDB server.
   }
 });
 
@@ -106,7 +115,7 @@ errors from clients.
 ``` JavaScript
 
 server.close().then(() => {
-  // The associated MongoDB server is now closed.
+  // The MongoDB server is now closed.
 });
 
 ```
@@ -116,7 +125,7 @@ server.close().then(() => {
 ``` JavaScript
 
 server.close((err) => {
-  // The associated MongoDB server is now closed.
+  // The MongoDB server is now closed.
 });
 
 ```
@@ -161,3 +170,7 @@ Emitted when attempting to stop a MongoDB server.
 #### close
 
 Emitted when a MongoDB server closes.
+
+## Credits
+
+A special thanks to @ForbesLindesay for contributing the NPM package name.

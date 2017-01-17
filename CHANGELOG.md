@@ -4,7 +4,12 @@ This project adheres to [Semantic Versioning](http://semver.org/). Notable
 changes to this project will be documented in this file for which the format
 is based on [Keep a Changelog](http://keepachangelog.com/).
 
----
+### [2.0.0][] - 2017-01-17
+
+#### Added
+
+- Support for NPM install
+- Lint markdown with remark
 
 ### [1.0.0][] — 2017-01-16
 
