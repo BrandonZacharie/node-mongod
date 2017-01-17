@@ -7,6 +7,14 @@
 
 Start and stop a local MongoDB server in Node.js like a boss.
 
+## Installation
+
+```Bash
+
+npm install mongod
+
+```
+
 ## Usage
 
 The constructor exported by this module optionally accepts a single argument;
@@ -162,3 +170,7 @@ Emitted when attempting to stop a MongoDB server.
 #### close
 
 Emitted when a MongoDB server closes.
+
+## Credits
+
+A special thanks to @ForbesLindesay for contributing the NPM package name.
