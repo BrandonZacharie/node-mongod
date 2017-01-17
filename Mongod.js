@@ -20,6 +20,15 @@
 const childprocess = require('child_process');
 const events = require('events');
 const PromiseQueue = require('promise-queue');
+
+/**
+ * A collection of regualar expressions used by {@link Mongod.parseData} to
+ * parse stdout and stderr messages.
+ * @see Mongod.parseData
+ * @readonly
+ * @private
+ * @type {Object.<String,RegExp>}
+ */
 const regExp = {
   terminalMessage: /waiting\s+for\s+connections|already\s+in\s+use|denied|error|exception|badvalue/im,
   whiteSpace: /\s/g,
