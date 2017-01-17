@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Configuration options for a {@link Mongod}.
+ * Configuration options for {@link Mongod}.
  * @typedef {Object} Mongod~Config
  * @property {String} [bin=mongod]
  * @property {String} [config]
