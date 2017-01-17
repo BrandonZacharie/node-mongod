@@ -173,4 +173,4 @@ Emitted when a MongoDB server closes.
 
 ## Credits
 
-A special thanks to @ForbesLindesay for contributing the NPM package name.
+A special thanks to [@ForbesLindesay](https://github.com/ForbesLindesay) for contributing the NPM package name.
