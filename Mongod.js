@@ -30,7 +30,7 @@ const PromiseQueue = require('promise-queue');
  * @type {Object.<String,RegExp>}
  */
 const regExp = {
-  terminalMessage: /waiting\s+for\s+connections|already\s+in\s+use|denied|error|exception|badvalue/im,
+  terminalMessage: /waiting\s+for\s+connections|child|already\s+in\s+use|denied|error|exception|badvalue/im,
   whiteSpace: /\s/g,
   newline: /\r?\n/
 };
@@ -180,6 +180,7 @@ class Mongod extends events.EventEmitter {
 
     switch (result.key) {
       case 'waitingforconnections':
+      case 'child':
         break;
 
       case 'alreadyinuse':
