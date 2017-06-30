@@ -20,6 +20,7 @@
 const childprocess = require('child_process');
 const events = require('events');
 const PromiseQueue = require('promise-queue');
+const ps = require('ps-node');
 
 /**
  * A collection of regualar expressions used by {@link Mongod.parseData} to
@@ -208,6 +209,41 @@ class Mongod extends events.EventEmitter {
   }
 
   /**
+   * Find a forked Redis process and kill it using the pid.
+   * @protected
+   * @argument {String} command
+   * @argument {String} processArguments
+   */
+  static killForkedProcess(command, processArguments) {
+    return new Promise((resolve, reject) => {
+      ps.lookup({
+        command: command,
+        arguments: processArguments,
+      }, function(err, resultList) {
+        if (err) {
+          throw new Error( err );
+        }
+        if (resultList.length > 0) {
+          resultList.forEach(function(process){
+            if( process ){
+              ps.kill(process.pid, function(err) {
+                if (err) {
+                  throw new Error(err);
+                }
+                else {
+                  resolve();
+                }
+              });
+            }
+          });
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
+  /**
    * Start a given {@link Mongod}.
    * @protected
    * @argument {Mongod} server
@@ -317,22 +353,26 @@ class Mongod extends events.EventEmitter {
       return server.closePromise;
     }
 
-    server.isClosing = true;
-    server.isOpening = false;
-    server.closePromise = server.promiseQueue.add(() => {
-      if (server.isOpening || !server.isRunning) {
-        server.isClosing = false;
+    Mongod.killForkedProcess('mongod', '--config')
+      .then(function() {
+        server.isClosing = true;
+        server.isOpening = false;
+        server.closePromise = server.promiseQueue.add(() => {
+          if (server.isOpening || !server.isRunning) {
+            server.isClosing = false;
 
-        return Promise.resolve(null);
-      }
+            return Promise.resolve(null);
+          }
 
-      return new Promise((resolve) => {
-        server.emit('closing');
-        server.process.once('close', () => resolve(null));
-        server.process.kill();
+          return new Promise((resolve) => {
+            server.emit('closing');
+            server.process.once('close', () => resolve(null));
+            server.process.kill();
+          });
+        });
+      })
+      .catch(function(){
       });
-    });
-
     return server.closePromise;
   }
 
