@@ -213,22 +213,23 @@ class Mongod extends events.EventEmitter {
    * @protected
    * @argument {String} command
    * @argument {String} processArguments
+   * @return {Promise<void>} when the forked process has been found and killed
    */
   static killForkedProcess(command, processArguments) {
     return new Promise((resolve, reject) => {
       ps.lookup({
         command: command,
-        arguments: processArguments,
+        arguments: processArguments
       }, function(err, resultList) {
         if (err) {
-          throw new Error( err );
+          reject('Unable to find mongod process: '+err);
         }
         if (resultList.length > 0) {
           resultList.forEach(function(process){
-            if( process ){
+            if (process){
               ps.kill(process.pid, function(err) {
                 if (err) {
-                  throw new Error(err);
+                  reject('Unable to find mongod process: '+err);
                 }
                 else {
                   resolve();
@@ -373,6 +374,7 @@ class Mongod extends events.EventEmitter {
       })
       .catch(function(){
       });
+
     return server.closePromise;
   }
 
