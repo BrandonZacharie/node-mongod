@@ -232,13 +232,17 @@ class Mongod extends events.EventEmitter {
                   reject('Unable to find mongod process: '+err);
                 }
                 else {
-                  resolve();
+                  // server.emit('closing');
+                  // server.process.once('close', () => resolve(null));
+                  resolve(null);
                 }
               });
             }
           });
         } else {
-          resolve();
+          // server.emit('closing');
+          // server.process.once('close', () => resolve(null));
+          resolve(null);
         }
       });
     });
@@ -355,26 +359,25 @@ class Mongod extends events.EventEmitter {
     }
 
     Mongod.killForkedProcess('mongod', '--config')
-      .then(function() {
-        server.isClosing = true;
-        server.isOpening = false;
-        server.closePromise = server.promiseQueue.add(() => {
-          if (server.isOpening || !server.isRunning) {
-            server.isClosing = false;
+    .then(function() {
+    })
+    .catch(function(e){
+    });
+    server.isClosing = true;
+    server.isOpening = false;
+    server.closePromise = server.promiseQueue.add(() => {
+      if (server.isOpening || !server.isRunning) {
+        server.isClosing = false;
 
-            return Promise.resolve(null);
-          }
+        return Promise.resolve(null);
+      }
 
-          return new Promise((resolve) => {
-            server.emit('closing');
-            server.process.once('close', () => resolve(null));
-            server.process.kill();
-          });
-        });
-      })
-      .catch(function(){
+      return new Promise((resolve) => {
+        server.emit('closing');
+        server.process.once('close', () => resolve(null));
+        server.process.kill();
       });
-
+    });
     return server.closePromise;
   }
 

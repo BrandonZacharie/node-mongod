@@ -369,7 +369,6 @@ describe('Mongod', () => {
         dbpath,
         port: generateRandomPort()
       });
-
       return expectToOpen(server).then((res) => {
         expectRunning(server);
         expect(res).to.equal(null);
@@ -515,11 +514,12 @@ describe('Mongod', () => {
         server.open(),
         promisify((done) => setTimeout(() => server.close(done), 10)),
         promisify((done) => setTimeout(() => server.open(done), 15)),
-        promisify((done) => setTimeout(() => server.close(done), 20)),
-        promisify((done) => setTimeout(() => server.open(done), 25))
+        // promisify((done) => setTimeout(() => server.close(done), 20)),
+        // promisify((done) => setTimeout(() => server.open(done), 25))
       ])
       .then(() => {
         expectRunning(server);
+
 
         return server.close();
       });
