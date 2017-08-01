@@ -3,6 +3,7 @@
 [![NPM version](https://img.shields.io/npm/v/mongod.svg)](https://www.npmjs.com/package/mongod)
 [![Build Status](https://img.shields.io/travis/BrandonZacharie/node-mongod/master.svg)](https://travis-ci.org/BrandonZacharie/node-mongod)
 [![Coverage Status](https://img.shields.io/coveralls/BrandonZacharie/node-mongod/master.svg)](https://coveralls.io/github/BrandonZacharie/node-mongod?branch=master)
+[![bitHound](https://img.shields.io/bithound/code/github/BrandonZacharie/node-mongod.svg)](https://www.bithound.io/github/BrandonZacharie/node-mongod)
 [![License](https://img.shields.io/npm/l/redis-server.svg)](https://github.com/BrandonZacharie/node-mongod/blob/master/LICENSE.md)
 
 Start and stop a local MongoDB server in Node.js like a boss.
