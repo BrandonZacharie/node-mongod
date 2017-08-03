@@ -28,13 +28,14 @@
     "remark": "remark ."
   },
   "dependencies": {
-    "promise-queue": "^2.2.3"
+    "promise-queue": "^2.2.3",
+    "ps-node": "^0.1.6"
   },
   "devDependencies": {
-    "chai": "^3.5.0",
+    "chai": "^4.1.0",
     "coveralls": "^2.11.15",
     "eslint": "^3.13.0",
-    "fs-promise": "^1.0.0",
+    "fs-extra": "^4.0.1",
     "istanbul": "^0.4.5",
     "js-yaml": "^3.7.0",
     "mocha": "^3.1.2",

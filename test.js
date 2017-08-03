@@ -2,10 +2,11 @@
 
 const childprocess = require('child_process');
 const chai = require('chai');
-const fspromise = require('fs-promise');
+const fs = require('fs-extra');
 const jsyaml = require('js-yaml');
 const mocha = require('mocha');
 const uuid = require('uuid');
+const ps = require('ps-node');
 const Mongod = require('./Mongod');
 const expect = chai.expect;
 const after = mocha.after;
@@ -51,7 +52,7 @@ const promisify = (delegate) =>
  * @return {Promise}
  */
 const mkdir = (dir) =>
-  fspromise.mkdirs(dir);
+  fs.mkdirs(dir);
 
 /**
  * Make the dbpath directory for a given {@linkcode server}.
@@ -148,6 +149,28 @@ const parsePort = (server, callback) => {
   server.on('stdout', listener);
 };
 
+/**
+  * Accepts the current mongo configuration file,
+  * adds config to fork mongod process, and returns the new file path
+  * @argument {String} conf
+  * @return {String} the new amended config file
+*/
+const addForkedBooleanToConfig = (conf) => {
+  const configWithFork = `${new Date().toISOString()}_1.conf`;
+  const configFromFile = fs.readFileSync(conf, 'utf8');
+  const configAsObject = jsyaml.safeLoad(configFromFile);
+  configAsObject.processManagement = {
+    fork: true
+  };
+  configAsObject.systemLog = {
+    destination: 'syslog'
+  };
+  const configAsYaml = jsyaml.dump(configAsObject);
+  fs.outputFile(configWithFork, configAsYaml);
+
+  return configWithFork;
+};
+
 describe('Mongod', () => {
   let bin = null;
   const conf = `${new Date().toISOString()}.conf`;
@@ -168,7 +191,7 @@ describe('Mongod', () => {
       done(err);
     });
   });
-  before(() => fspromise.emptyDir('data/db'));
+  before(() => fs.emptyDir('data/db'));
   before(() => {
     const yaml = jsyaml.dump({
       net: {
@@ -183,10 +206,10 @@ describe('Mongod', () => {
       }
     });
 
-    return fspromise.writeFile(conf, yaml);
+    return fs.writeFile(conf, yaml);
   });
   before(() => mkdir(dbpath));
-  after(() => fspromise.unlink(conf));
+  after(() => fs.unlink(conf));
   describe('.parseConfig()', () => {
     it('should parse bin, port, and dbpath', () => {
       const expectedObject = { bin, port, dbpath };
@@ -308,6 +331,73 @@ describe('Mongod', () => {
       for (let value of values) {
         expect(Mongod.parseData(value)).to.equal(null);
       }
+    });
+  });
+  describe('.killForkedProcess()', () => {
+    let server;
+    let configWithFork;
+    before(function(done) {
+      configWithFork = addForkedBooleanToConfig(conf);
+      server = new Mongod({
+        conf: configWithFork
+      });
+      expectToOpen(server).then(() => {
+        done();
+      });
+    });
+    it('should return a promise', () => {
+      const exexuteMethod = Mongod.killForkedProcess('foo', '--bar')
+      .then(() => {
+      })
+      .catch(() => {
+      });
+      expect(exexuteMethod).to.be.a('promise');
+    });
+    it('returns rejected promise when no processes are running', function() {
+      return Mongod.killForkedProcess('foo', '--bar').then(function fulfilled(result) {
+        throw new Error('Promise was unexpectedly fulfilled. Result: ' + result);
+      }, function rejected(error) {
+        expect(error).to.equal('Unable to find foo process: null');
+      });
+    });
+    it('returns rejected promise on bad input', function() {
+      return Mongod.killForkedProcess().then(function fulfilled(result) {
+        throw new Error('Promise was unexpectedly fulfilled. Result: ' + result);
+      }, function rejected(error) {
+        expect(error).to.equal('Command cannot be empty');
+      });
+    });
+    it('should start with a forked process', (done) => {
+      ps.lookup({
+        command: 'mongod',
+        arguments: '--config'
+      }, function(err, resultList) {
+        if (err) {
+          throw new Error(`Unable to find mongod process: ${err}`);
+        }
+        expect(resultList).to.have.lengthOf.at.least(1);
+        done();
+      });
+    });
+    it('should find and kill a forked process', (done) => {
+      Mongod.killForkedProcess('mongod', '--config').then(function() {
+        ps.lookup({
+          command: 'mongod',
+          arguments: '--config'
+        }, function(err, resultList) {
+          if (err) {
+            throw new Error(`Unable to find mongod process: ${err}`);
+          }
+          expect(resultList).to.have.lengthOf(0);
+          done();
+        });
+      })
+      .catch((error) => {
+        throw new Error(`Process was not found or there was an error: ${error}`);
+      });
+    });
+    after(function() {
+      fs.unlink(configWithFork);
     });
   });
   describe('#constructor()', () => {

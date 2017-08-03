@@ -20,6 +20,7 @@
 const childprocess = require('child_process');
 const events = require('events');
 const PromiseQueue = require('promise-queue');
+const ps = require('ps-node');
 
 /**
  * A collection of regualar expressions used by {@link Mongod.parseData} to
@@ -30,7 +31,7 @@ const PromiseQueue = require('promise-queue');
  * @type {Object.<String,RegExp>}
  */
 const regExp = {
-  terminalMessage: /waiting\s+for\s+connections|already\s+in\s+use|denied|error|exception|badvalue/im,
+  terminalMessage: /waiting\s+for\s+connections|child|already\s+in\s+use|denied|error|exception|badvalue/im,
   whiteSpace: /\s/g,
   newline: /\r?\n/
 };
@@ -180,6 +181,7 @@ class Mongod extends events.EventEmitter {
 
     switch (result.key) {
       case 'waitingforconnections':
+      case 'child':
         break;
 
       case 'alreadyinuse':
@@ -204,6 +206,46 @@ class Mongod extends events.EventEmitter {
     }
 
     return result;
+  }
+
+  /**
+   * Find a forked Redis process and kill it using the pid.
+   * @protected
+   * @argument {String} command
+   * @argument {String} processArguments
+   * @return {Promise<void>} when the forked process has been found and killed
+   */
+  static killForkedProcess(command, processArguments) {
+    return new Promise((resolve, reject) => {
+      if (command === null || command === '' || command === undefined) {
+        reject('Command cannot be empty');
+      } else {
+        ps.lookup({
+          command: command,
+          arguments: processArguments
+        }, function(err, resultList) {
+          if (err) {
+            reject(`Unable to find ${command} process: ${err}`);
+          }
+          if (resultList.length > 0) {
+            resultList.forEach(function(process){
+              if (process){
+                ps.kill(process.pid, 'SIGKILL', function(err) {
+                  if (err) {
+                    reject(`Unable to find ${command} process: ${err}`);
+                  }
+                  else {
+                    resolve(null);
+                  }
+                });
+              }
+            });
+          } else {
+            reject(`Unable to find ${command} process: ${err}`);
+          }
+        });
+      }
+    });
   }
 
   /**
@@ -316,6 +358,9 @@ class Mongod extends events.EventEmitter {
       return server.closePromise;
     }
 
+    Mongod.killForkedProcess('mongod', '--config')
+    .catch(function(){
+    });
     server.isClosing = true;
     server.isOpening = false;
     server.closePromise = server.promiseQueue.add(() => {
