@@ -2,7 +2,7 @@
 
 const childprocess = require('child_process');
 const chai = require('chai');
-const fs = require('fs-extra')
+const fs = require('fs-extra');
 const jsyaml = require('js-yaml');
 const mocha = require('mocha');
 const uuid = require('uuid');
@@ -149,26 +149,27 @@ const parsePort = (server, callback) => {
   server.on('stdout', listener);
 };
 
-/** 
+/**
   * Accepts the current mongo configuration file,
   * adds config to fork mongod process, and returns the new file path
-  * @argument {string} the current mongo configuration file
+  * @argument {String} conf
   * @return {String} the new amended config file
 */
 const addForkedBooleanToConfig = (conf) => {
-  const conf2 = `${new Date().toISOString()}_1.conf`;
+  const configWithFork = `${new Date().toISOString()}_1.conf`;
   const configFromFile = fs.readFileSync(conf, 'utf8');
   const configAsObject = jsyaml.safeLoad(configFromFile);
   configAsObject.processManagement = {
     fork: true
   };
   configAsObject.systemLog = {
-   destination: 'syslog'
+    destination: 'syslog'
   };
   const configAsYaml = jsyaml.dump(configAsObject);
-  fs.outputFile(conf2, configAsYaml);
-  return conf2;
-}
+  fs.outputFile(configWithFork, configAsYaml);
+
+  return configWithFork;
+};
 
 describe('Mongod', () => {
   let bin = null;
@@ -340,29 +341,30 @@ describe('Mongod', () => {
       server = new Mongod({
         conf: configWithFork
       });
-      expectToOpen(server).then((res) => {
+      expectToOpen(server).then(() => {
         done();
       });
     });
     it('should return a promise', () => {
       const exexuteMethod = Mongod.killForkedProcess('foo', '--bar')
       .then(() => {
-      }).catch(() => {
       })
+      .catch(() => {
+      });
       expect(exexuteMethod).to.be.a('promise');
     });
     it('returns rejected promise when no processes are running', function() {
       return Mongod.killForkedProcess('foo', '--bar').then(function fulfilled(result) {
         throw new Error('Promise was unexpectedly fulfilled. Result: ' + result);
       }, function rejected(error) {
-        expect(error).to.equal("Unable to find foo process: null");
+        expect(error).to.equal('Unable to find foo process: null');
       });
     });
     it('returns rejected promise on bad input', function() {
       return Mongod.killForkedProcess().then(function fulfilled(result) {
         throw new Error('Promise was unexpectedly fulfilled. Result: ' + result);
       }, function rejected(error) {
-        expect(error).to.equal("Command cannot be empty");
+        expect(error).to.equal('Command cannot be empty');
       });
     });
     it('should start with a forked process', (done) => {
@@ -370,6 +372,9 @@ describe('Mongod', () => {
         command: 'mongod',
         arguments: '--config'
       }, function(err, resultList) {
+        if (err) {
+          throw new Error(`Unable to find mongod process: ${err}`);
+        }
         expect(resultList).to.have.lengthOf.at.least(1);
         done();
       });
@@ -380,18 +385,21 @@ describe('Mongod', () => {
           command: 'mongod',
           arguments: '--config'
         }, function(err, resultList) {
+          if (err) {
+            throw new Error(`Unable to find mongod process: ${err}`);
+          }
           expect(resultList).to.have.lengthOf(0);
           done();
         });
       })
-      .catch((err) => {
-        console.error("err: ", err)
-      })
+      .catch((error) => {
+        throw new Error(`Process was not found or there was an error: ${error}`);
+      });
     });
     after(function() {
       fs.unlink(configWithFork);
     });
-  })
+  });
   describe('#constructor()', () => {
     it('constructs a new instance', () => {
       const server = new Mongod();
@@ -451,6 +459,7 @@ describe('Mongod', () => {
         dbpath,
         port: generateRandomPort()
       });
+
       return expectToOpen(server).then((res) => {
         expectRunning(server);
         expect(res).to.equal(null);
@@ -601,7 +610,6 @@ describe('Mongod', () => {
       ])
       .then(() => {
         expectRunning(server);
-
 
         return server.close();
       });

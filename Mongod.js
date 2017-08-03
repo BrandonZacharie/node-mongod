@@ -217,7 +217,7 @@ class Mongod extends events.EventEmitter {
    */
   static killForkedProcess(command, processArguments) {
     return new Promise((resolve, reject) => {
-      if(command === null || command === '' || command === undefined) {
+      if (command === null || command === '' || command === undefined) {
         reject('Command cannot be empty');
       } else {
         ps.lookup({
@@ -359,7 +359,7 @@ class Mongod extends events.EventEmitter {
     }
 
     Mongod.killForkedProcess('mongod', '--config')
-    .catch(function(error){
+    .catch(function(){
     });
     server.isClosing = true;
     server.isOpening = false;
@@ -376,6 +376,7 @@ class Mongod extends events.EventEmitter {
         server.process.kill();
       });
     });
+
     return server.closePromise;
   }
 
