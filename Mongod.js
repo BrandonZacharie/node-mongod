@@ -217,34 +217,34 @@ class Mongod extends events.EventEmitter {
    */
   static killForkedProcess(command, processArguments) {
     return new Promise((resolve, reject) => {
-      ps.lookup({
-        command: command,
-        arguments: processArguments
-      }, function(err, resultList) {
-        if (err) {
-          reject('Unable to find mongod process: '+err);
-        }
-        if (resultList.length > 0) {
-          resultList.forEach(function(process){
-            if (process){
-              ps.kill(process.pid, function(err) {
-                if (err) {
-                  reject('Unable to find mongod process: '+err);
-                }
-                else {
-                  // server.emit('closing');
-                  // server.process.once('close', () => resolve(null));
-                  resolve(null);
-                }
-              });
-            }
-          });
-        } else {
-          // server.emit('closing');
-          // server.process.once('close', () => resolve(null));
-          resolve(null);
-        }
-      });
+      if(command === null || command === '' || command === undefined) {
+        reject('Command cannot be empty');
+      } else {
+        ps.lookup({
+          command: command,
+          arguments: processArguments
+        }, function(err, resultList) {
+          if (err) {
+            reject(`Unable to find ${command} process: ${err}`);
+          }
+          if (resultList.length > 0) {
+            resultList.forEach(function(process){
+              if (process){
+                ps.kill(process.pid, 'SIGKILL', function(err) {
+                  if (err) {
+                    reject(`Unable to find ${command} process: ${err}`);
+                  }
+                  else {
+                    resolve(null);
+                  }
+                });
+              }
+            });
+          } else {
+            reject(`Unable to find ${command} process: ${err}`);
+          }
+        });
+      }
     });
   }
 
@@ -359,9 +359,7 @@ class Mongod extends events.EventEmitter {
     }
 
     Mongod.killForkedProcess('mongod', '--config')
-    .then(function() {
-    })
-    .catch(function(e){
+    .catch(function(error){
     });
     server.isClosing = true;
     server.isOpening = false;
