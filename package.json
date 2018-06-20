@@ -21,6 +21,9 @@
     "email": "brandon.zacharie@gmail.com"
   },
   "main": "Mongod.js",
+  "engines": {
+    "node": ">=4.0.0"
+  },
   "scripts": {
     "test": "istanbul cover -x test.js _mocha",
     "lint": "npm run eslint && npm run remark",
@@ -28,18 +31,18 @@
     "remark": "remark ."
   },
   "dependencies": {
-    "promise-queue": "^2.2.3"
+    "promise-queue": "^2.2.5"
   },
   "devDependencies": {
-    "chai": "^3.5.0",
-    "coveralls": "^2.11.15",
-    "eslint": "^3.13.0",
-    "fs-promise": "^1.0.0",
+    "chai": "^4.1.2",
+    "coveralls": "^3.0.1",
+    "eslint": "^4.19.1",
+    "fs-promise": "^2.0.3",
     "istanbul": "^0.4.5",
-    "js-yaml": "^3.7.0",
-    "mocha": "^3.1.2",
-    "remark-cli": "^2.1.0",
-    "remark-preset-lint-recommended": "^1.0.0",
-    "uuid": "^3.0.1"
+    "js-yaml": "^3.12.0",
+    "mocha": "^5.2.0",
+    "remark-cli": "^5.0.0",
+    "remark-preset-lint-recommended": "^3.0.2",
+    "uuid": "^3.2.1"
   }
 }
