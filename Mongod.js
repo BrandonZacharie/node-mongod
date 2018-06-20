@@ -17,6 +17,31 @@
  * @argument {Error} err
  */
 
+/**
+ * Emitted when a MongoDB server prints to stdout.
+ * @event Mongod#stdout
+ */
+
+/**
+ * Emitted when attempting to start a MongoDB server.
+ * @event Mongod#opening
+ */
+
+/**
+ * Emitted when a MongoDB server becomes ready to service requests.
+ * @event Mongod#open
+ */
+
+/**
+ * Emitted when attempting to stop a MongoDB server.
+ * @event Mongod#closing
+ */
+
+/**
+ * Emitted once a MongoDB server has stopped.
+ * @event Mongod#close
+ */
+
 const childprocess = require('child_process');
 const events = require('events');
 const PromiseQueue = require('promise-queue');
@@ -173,9 +198,9 @@ class Mongod extends events.EventEmitter {
     const result = {
       err: null,
       key: matches
-      .pop()
-      .replace(regExp.whiteSpace, '')
-      .toLowerCase()
+        .pop()
+        .replace(regExp.whiteSpace, '')
+        .toLowerCase()
     };
 
     switch (result.key) {
@@ -421,11 +446,13 @@ class Mongod extends events.EventEmitter {
   open(callback) {
     const promise = Mongod.open(this);
 
-    return typeof callback === 'function'
-    ? promise
-      .then((v) => callback(null, v))
-      .catch((e) => callback(e, null))
-    : promise;
+    if (typeof callback === 'function') {
+      return promise
+        .then((v) => callback(null, v))
+        .catch((e) => callback(e, null));
+    }
+
+    return promise;
   }
 
   /**
@@ -436,11 +463,13 @@ class Mongod extends events.EventEmitter {
   close(callback) {
     const promise = Mongod.close(this);
 
-    return typeof callback === 'function'
-    ? promise
-      .then((v) => callback(null, v))
-      .catch((e) => callback(e, null))
-    : promise;
+    if (typeof callback === 'function') {
+      return promise
+        .then((v) => callback(null, v))
+        .catch((e) => callback(e, null));
+    }
+
+    return promise;
   }
 }
 
