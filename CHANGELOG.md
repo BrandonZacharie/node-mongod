@@ -6,6 +6,22 @@ is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ### [Unreleased][]
 
+#### Changed
+
+- Replace `istanbul` with `nyc` for testing
+- Update dependencies
+  - promise-queue 2.2.5
+- Update dev dependencies
+  - chai 4.1.2
+  - coveralls 3.0.1
+  - eslint 4.19.1
+  - fs-promise 2.0.3
+  - js-yaml 3.12.0
+  - mocha 5.2.0
+  - remark-cli 5.0.0
+  - remark-preset-lint-recommended 3.0.2
+  - uuid 3.2.1
+
 #### Deprecated
 
 - Support for Node.js versions not designated as LTS
