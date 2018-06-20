@@ -4,6 +4,12 @@ This project adheres to [Semantic Versioning](http://semver.org/). Notable
 changes to this project will be documented in this file for which the format
 is based on [Keep a Changelog](http://keepachangelog.com/).
 
+### [Unreleased][]
+
+#### Deprecated
+
+- Support for Node.js versions not designated as LTS
+
 ### [2.0.0][] - 2017-01-17
 
 #### Added
@@ -55,6 +61,7 @@ is based on [Keep a Changelog](http://keepachangelog.com/).
 
 - Initial release
 
+[Unreleased]: https://github.com/BrandonZacharie/node-mongod/compare/2.0.0...HEAD
 [2.0.0]: https://github.com/BrandonZacharie/node-mongod/compare/1.0.0...2.0.0
 [1.0.0]: https://github.com/BrandonZacharie/node-mongod/compare/0.2.0...1.0.0
 [0.2.0]: https://github.com/BrandonZacharie/node-mongod/compare/0.1.0...0.2.0
