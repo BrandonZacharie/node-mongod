@@ -25,10 +25,13 @@
     "node": ">=4.0.0"
   },
   "scripts": {
-    "test": "istanbul cover -x test.js _mocha",
+    "test": "npm run nyc",
+    "nyc": "nyc npm run mocha",
+    "mocha": "mocha --exit --reporter list",
     "lint": "npm run eslint && npm run remark",
     "eslint": "eslint --ignore-path .gitignore **/*.js",
-    "remark": "remark ."
+    "remark": "remark --ignore-path .gitignore --use lint --quiet --frail '.'",
+    "coveralls": "nyc report --reporter=text-lcov | coveralls"
   },
   "dependencies": {
     "promise-queue": "^2.2.5"
@@ -38,9 +41,9 @@
     "coveralls": "^3.0.1",
     "eslint": "^4.19.1",
     "fs-promise": "^2.0.3",
-    "istanbul": "^0.4.5",
     "js-yaml": "^3.12.0",
     "mocha": "^5.2.0",
+    "nyc": "^12.0.2",
     "remark-cli": "^5.0.0",
     "remark-preset-lint-recommended": "^3.0.2",
     "uuid": "^3.2.1"
